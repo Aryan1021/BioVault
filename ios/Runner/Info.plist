@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- ✅ Added for Face ID support -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app uses Face ID to log in</string>
+
 </dict>
 </plist>
