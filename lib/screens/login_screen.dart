@@ -315,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Use your fingerprint, face, or voice for secure access',
+                            'Use your fingerprint to log in',
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 12,
