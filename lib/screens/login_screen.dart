@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/biometric_auth_service.dart';
+import '../services/secure_storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +14,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  final _biometricAuthService = BiometricAuthService();
+  final _secureStorageService = SecureStorageService();
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -35,6 +39,34 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     super.dispose();
   }
 
+  void _handleBiometricLogin() async {
+    final canAuthenticate = await _biometricAuthService.isBiometricAvailable();
+    if (!canAuthenticate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometric authentication not available')),
+      );
+      return;
+    }
+
+    final authenticated = await _biometricAuthService.authenticate();
+    if (authenticated) {
+      await _secureStorageService.write('login_token', 'dummy_token');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Biometric login successful')),
+        );
+      }
+
+      // TODO: Navigate to the next screen
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Authentication failed')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,10 +75,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
           ),
         ),
         child: SafeArea(
@@ -55,9 +84,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             child: Center(
               child: SingleChildScrollView(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // App Logo and Branding
                     Container(
                       width: 100,
                       height: 100,
@@ -95,8 +122,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                     ),
                     const SizedBox(height: 48),
-
-                    // Login Form Card
                     Container(
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
@@ -112,7 +137,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                       child: Column(
                         children: [
-                          // Email Field
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.grey[50],
@@ -124,22 +148,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
                                 labelText: 'Email Address',
-                                prefixIcon: Icon(
-                                  Icons.email_outlined,
-                                  color: Colors.grey[600],
-                                ),
+                                prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[600]),
                                 border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                 labelStyle: TextStyle(color: Colors.grey[600]),
                               ),
                             ),
                           ),
                           const SizedBox(height: 20),
-
-                          // Password Field
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.grey[50],
@@ -151,15 +167,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                prefixIcon: Icon(
-                                  Icons.lock_outline,
-                                  color: Colors.grey[600],
-                                ),
+                                prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
+                                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                     color: Colors.grey[600],
                                   ),
                                   onPressed: () {
@@ -169,17 +180,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   },
                                 ),
                                 border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                 labelStyle: TextStyle(color: Colors.grey[600]),
                               ),
                             ),
                           ),
                           const SizedBox(height: 12),
-
-                          // Forgot Password
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -188,25 +194,21 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               },
                               child: Text(
                                 'Forgot Password?',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
+                                style: TextStyle(color: Colors.grey[600], fontSize: 14),
                               ),
                             ),
                           ),
                           const SizedBox(height: 24),
-
-                          // Login Button
                           SizedBox(
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : () {
+                              onPressed: _isLoading
+                                  ? null
+                                  : () {
                                 setState(() {
                                   _isLoading = true;
                                 });
-                                // TODO: Add your login logic here
                                 Future.delayed(const Duration(seconds: 2), () {
                                   setState(() {
                                     _isLoading = false;
@@ -217,9 +219,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 backgroundColor: const Color(0xFF667eea),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               child: _isLoading
                                   ? const SizedBox(
@@ -227,23 +227,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                                  : const Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                                  : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                             ),
                           ),
                           const SizedBox(height: 32),
-
-                          // Divider
                           Row(
                             children: [
                               Expanded(child: Divider(color: Colors.grey[300])),
@@ -251,19 +241,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   'or',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500),
                                 ),
                               ),
                               Expanded(child: Divider(color: Colors.grey[300])),
                             ],
                           ),
                           const SizedBox(height: 32),
-
-                          // Biometric Login Button
                           AnimatedBuilder(
                             animation: _pulseAnimation,
                             builder: (context, child) {
@@ -289,15 +273,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                     color: Colors.transparent,
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(40),
-                                      onTap: () {
-                                        // TODO: Call your biometric authentication method here
-                                        // Example: BiometricHelper.authenticate();
-                                      },
-                                      child: const Icon(
-                                        Icons.fingerprint,
-                                        size: 40,
-                                        color: Colors.white,
-                                      ),
+                                      onTap: _handleBiometricLogin,
+                                      child: const Icon(Icons.fingerprint, size: 40, color: Colors.white),
                                     ),
                                   ),
                                 ),
@@ -307,36 +284,24 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           const SizedBox(height: 16),
                           Text(
                             'Touch for Biometric Login',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Use your fingerprint to log in',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                            ),
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
                             textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 32),
-
-                    // Sign Up Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           "Don't have an account? ",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
                         ),
                         TextButton(
                           onPressed: () {
@@ -344,11 +309,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           },
                           child: const Text(
                             'Sign Up',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
