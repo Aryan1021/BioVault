@@ -1,33 +1,35 @@
 import 'package:local_auth/local_auth.dart';
 
 class BiometricAuthService {
-  final LocalAuthentication _auth = LocalAuthentication();
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
-  /// Check if biometric authentication is available and supported on device
   Future<bool> isBiometricAvailable() async {
     try {
-      final canCheck = await _auth.canCheckBiometrics;
-      final isSupported = await _auth.isDeviceSupported();
-      return canCheck && isSupported;
+      final canAuthenticate = await _localAuth.canCheckBiometrics;
+      final isDeviceSupported = await _localAuth.isDeviceSupported();
+      print(
+          "Biometrics available: $canAuthenticate, Device supported: $isDeviceSupported");
+      return canAuthenticate && isDeviceSupported;
     } catch (e) {
-      print('Biometric availability check failed: $e');
+      print("Biometric check failed: $e");
       return false;
     }
   }
 
-  /// Perform biometric authentication with fallback enabled
   Future<bool> authenticate() async {
     try {
-      final authenticated = await _auth.authenticate(
-        localizedReason: 'Please authenticate to login',
+      final didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Scan your fingerprint to authenticate',
         options: const AuthenticationOptions(
+          biometricOnly: true,
           stickyAuth: true,
-          biometricOnly: false, // Allow device PIN fallback here
+          useErrorDialogs: true,
         ),
       );
-      return authenticated;
+      print("Authentication result: $didAuthenticate");
+      return didAuthenticate;
     } catch (e) {
-      print('Biometric auth error: $e');
+      print("Authentication error: $e");
       return false;
     }
   }
