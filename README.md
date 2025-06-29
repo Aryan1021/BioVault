@@ -59,8 +59,6 @@ In `Info.plist`:
 
 ## 📦 How to Set Up the Project
 
----
-
 ### 🔧 Requirements
 
 - Flutter SDK (v3.29.3 or above)
@@ -87,15 +85,13 @@ In `Info.plist`:
 
 ## 🧪 Tested On
 
-✅ Xiaomi device (Android 14) with fingerprint
-✅ Emulator (fallback not available)
-✅ Android 13 physical device
+- ✅ Xiaomi device (Android 14) with fingerprint
+- ✅ Emulator (fallback not available)
+- ✅ Android 13 physical device
 
 ---
 
 ## 🌟 Key Features Implemented
-
----
 
 **✅ Biometric Authentication**
 - Uses local_auth package to authenticate using fingerprint.
@@ -118,29 +114,37 @@ In `Info.plist`:
 ---
 
 ## 📸 Screenshots
-![Login Screen](https://github.com/user-attachments/assets/e1f68f3c-584d-424c-9ae3-8d4f169f9302)
-![Biometric Prompt](https://github.com/user-attachments/assets/1429ba42-d57b-45da-8c76-d3d2dbbf33a4)
-![Home Screen](https://github.com/user-attachments/assets/f412bbed-9ac1-4c90-9b50-d9e634e2b121)
+
+<table>
+  <tr>
+    <td align="center">
+      <strong>🔐 Login Screen</strong><br>
+      <img src="https://github.com/user-attachments/assets/8eaf92fc-218b-4b38-a5f3-9a1bff0d9b26" width="250"/>
+    </td>
+    <td align="center">
+      <strong>🏠 Home Screen</strong><br>
+      <img src="https://github.com/user-attachments/assets/b3a35444-a5cd-41b8-a374-4e2274bc8812" width="250"/>
+    </td>
+    <td align="center">
+      <strong>✅ Biometric Prompt</strong><br>
+      <img src="https://github.com/user-attachments/assets/7bf9aefe-5966-416f-9c9c-00a2dce24e99" width="250"/>
+    </td>
+  </tr>
+</table>
 
 ## 🎬 Demo Video
-▶️ [Click here to watch the demo video](https://drive.google.com/drive/u/0/folders/1eSslX-2pNGM544mSsVYZxhtCN_r5G4KU)
+
+▶️ [Watch the Demo Video](https://drive.google.com/drive/u/0/folders/1eSslX-2pNGM544mSsVYZxhtCN_r5G4KU)
 
 ---
 
 ## ⚠️ Limitations & Assumptions
 
----
-
-⚠️ Biometric fallback (PIN) was initially implemented but disabled in the final version for simplicity.
-⚠️ No backend or real token validation. Tokens are simulated (biometric_token) for demonstration only.
-✅ Assumes biometrics are already set up on the device.
+- ⚠️ Biometric fallback (PIN) was initially implemented but disabled in the final version for simplicity.
+- ⚠️ No backend or real token validation. Tokens are simulated (biometric_token) for demonstration only.
+- ✅ Assumes biometrics are already set up on the device.
 
 ---
 
 ## 👨‍💻 Author
 Aryan Raj
-
----
-
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
