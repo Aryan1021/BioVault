@@ -117,17 +117,17 @@ In `Info.plist`:
 
 <table>
   <tr>
-    <td align="center">
+    <td align="center" style="padding: 0 10px;">
       <strong>🔐 Login Screen</strong><br>
       <img src="https://github.com/user-attachments/assets/8eaf92fc-218b-4b38-a5f3-9a1bff0d9b26" width="250"/>
     </td>
-    <td align="center">
-      <strong>🏠 Home Screen</strong><br>
-      <img src="https://github.com/user-attachments/assets/b3a35444-a5cd-41b8-a374-4e2274bc8812" width="250"/>
-    </td>
-    <td align="center">
+    <td align="center" style="padding: 0 10px;">
       <strong>✅ Biometric Prompt</strong><br>
       <img src="https://github.com/user-attachments/assets/7bf9aefe-5966-416f-9c9c-00a2dce24e99" width="250"/>
+    </td>
+    <td align="center" style="padding: 0 10px;">
+      <strong>🏠 Home Screen</strong><br>
+      <img src="https://github.com/user-attachments/assets/b3a35444-a5cd-41b8-a374-4e2274bc8812" width="250"/>
     </td>
   </tr>
 </table>
