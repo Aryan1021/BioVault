@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/biometric_auth_service.dart';
 import '../services/secure_storage_service.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,10 +15,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
   final _biometricAuthService = BiometricAuthService();
   final _secureStorageService = SecureStorageService();
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+
+  final _fallbackPinController = TextEditingController();
+
+  bool _biometricAvailable = false;
 
   @override
   void initState() {
@@ -29,6 +36,28 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    _checkExistingLogin();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkExistingLogin() async {
+    final token = await _secureStorageService.read('login_token');
+    if (token != null) {
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    }
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final available = await _biometricAuthService.isBiometricAvailable();
+    setState(() {
+      _biometricAvailable = available;
+    });
   }
 
   @override
@@ -36,34 +65,129 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _pulseController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _fallbackPinController.dispose();
     super.dispose();
   }
 
   void _handleBiometricLogin() async {
-    final canAuthenticate = await _biometricAuthService.isBiometricAvailable();
-    if (!canAuthenticate) {
+    if (!_biometricAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Biometric authentication not available')),
+        const SnackBar(content: Text('Biometric authentication is not available on this device.')),
       );
       return;
     }
 
-    final authenticated = await _biometricAuthService.authenticate();
-    if (authenticated) {
-      await _secureStorageService.write('login_token', 'dummy_token');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometric login successful')),
-        );
+    try {
+      final authenticated = await _biometricAuthService.authenticate();
+      if (authenticated) {
+        await _secureStorageService.write('login_token', 'biometric_token');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric login successful')),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      } else {
+        _showFallbackDialog();
       }
+    } catch (e) {
+      _showFallbackDialog();
+    }
+  }
 
-      // TODO: Navigate to the next screen
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication failed')),
+  void _showFallbackDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Fallback Login'),
+          content: TextField(
+            controller: _fallbackPinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            decoration: const InputDecoration(
+              labelText: 'Enter your 4-digit PIN',
+              border: OutlineInputBorder(),
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _fallbackPinController.clear();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_fallbackPinController.text == '1234') {
+                  await _secureStorageService.write('login_token', 'fallback_token');
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    _fallbackPinController.clear();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('PIN login successful')),
+                    );
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Incorrect PIN')),
+                  );
+                }
+              },
+              child: const Text('Login'),
+            ),
+          ],
         );
-      }
+      },
+    );
+  }
+
+  void _handleEmailPasswordLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email address')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    await Future.delayed(const Duration(seconds: 2));
+
+    setState(() => _isLoading = false);
+
+    // Simulate successful login by saving token securely
+    await _secureStorageService.write('login_token', 'email_password_token');
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login successful')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
     }
   }
 
@@ -91,26 +215,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 2,
-                        ),
+                        border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
                       ),
-                      child: const Icon(
-                        Icons.security,
-                        size: 50,
-                        color: Colors.white,
-                      ),
+                      child: const Icon(Icons.security, size: 50, color: Colors.white),
                     ),
                     const SizedBox(height: 24),
                     const Text(
                       'BioVault',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -121,7 +233,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         fontWeight: FontWeight.w300,
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      _biometricAvailable
+                          ? 'Use your fingerprint or face ID to login quickly.'
+                          : 'Biometric authentication not available on this device.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.w400,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
                     Container(
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
@@ -189,13 +313,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () {
-                                // TODO: Handle forgot password
-                              },
-                              child: Text(
-                                'Forgot Password?',
-                                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                              ),
+                              onPressed: () {},
+                              child: Text('Forgot Password?', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -203,18 +322,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: _isLoading
-                                  ? null
-                                  : () {
-                                setState(() {
-                                  _isLoading = true;
-                                });
-                                Future.delayed(const Duration(seconds: 2), () {
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-                                });
-                              },
+                              onPressed: _isLoading ? null : _handleEmailPasswordLogin,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF667eea),
                                 foregroundColor: Colors.white,
@@ -225,10 +333,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   ? const SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
                                   : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                             ),
@@ -237,61 +342,57 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           Row(
                             children: [
                               Expanded(child: Divider(color: Colors.grey[300])),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'or',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500),
-                                ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                child: Text('or', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
                               ),
                               Expanded(child: Divider(color: Colors.grey[300])),
                             ],
                           ),
                           const SizedBox(height: 32),
-                          AnimatedBuilder(
-                            animation: _pulseAnimation,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: _pulseAnimation.value,
-                                child: Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(40),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF667eea).withOpacity(0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 10),
+                          if (_biometricAvailable) ...[
+                            AnimatedBuilder(
+                              animation: _pulseAnimation,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: _pulseAnimation.value,
+                                  child: Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
                                       ),
-                                    ],
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
                                       borderRadius: BorderRadius.circular(40),
-                                      onTap: _handleBiometricLogin,
-                                      child: const Icon(Icons.fingerprint, size: 40, color: Colors.white),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF667eea).withOpacity(0.3),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(40),
+                                        onTap: _handleBiometricLogin,
+                                        child: const Icon(Icons.fingerprint, size: 40, color: Colors.white),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Touch for Biometric Login',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Use your fingerprint to log in',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                            textAlign: TextAlign.center,
-                          ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Text('Touch for Biometric Login', style: TextStyle(color: Colors.grey[600])),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Use your fingerprint or face ID to log in',
+                              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -299,18 +400,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          "Don't have an account? ",
-                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                        ),
+                        Text("Don't have an account? ", style: TextStyle(color: Colors.white.withOpacity(0.8))),
                         TextButton(
-                          onPressed: () {
-                            // TODO: Navigate to sign up screen
-                          },
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                          ),
+                          onPressed: () {},
+                          child: const Text('Sign Up', style: TextStyle(color: Colors.white)),
                         ),
                       ],
                     ),
